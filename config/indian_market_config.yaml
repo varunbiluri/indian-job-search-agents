@@ -1,0 +1,166 @@
+# Indian Market Job Search Configuration
+
+# API Configuration
+api:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  workers: 8  # Increased for Indian market load
+
+# Database Configuration
+database:
+  url: "postgresql://airflow:airflow@airflow-postgresql:5432/airflow"
+  pool_size: 50  # Increased for high volume
+  max_overflow: 100
+  echo: false
+
+# Redis Configuration
+redis:
+  url: "redis://redis:6379"
+  pool_size: 20
+  cluster_mode: false  # Enable for high scale
+
+# AI Models Configuration
+ai_models:
+  llama2:
+    enabled: true
+    endpoint: "http://llama2-service:8080"
+    model_size: "7B"
+    max_tokens: 512
+    temperature: 0.1
+    timeout: 30
+  
+  falcon:
+    enabled: true
+    endpoint: "http://falcon-service:8080"
+    model_size: "7B"
+    max_tokens: 512
+    temperature: 0.1
+    timeout: 30
+  
+  mistral:
+    enabled: true
+    endpoint: "http://mistral-service:8080"
+    model_size: "7B"
+    max_tokens: 512
+    temperature: 0.1
+    timeout: 30
+
+# Indian Market Configuration
+indian_market:
+  enabled: true
+  search_frequency: "hourly"
+  max_companies_per_search: 200
+  quality_threshold: 60
+  duplicate_detection: true
+  
+  # Company Types to Search
+  company_types:
+    - "fintech"
+    - "edtech"
+    - "healthtech"
+    - "ecommerce"
+    - "saas"
+    - "logistics"
+    - "realestate"
+    - "travel"
+    - "media"
+    - "gaming"
+    - "automotive"
+    - "foodtech"
+    - "agritech"
+    - "cleantech"
+    - "deeptech"
+  
+  # Indian Locations
+  locations:
+    - "Bangalore"
+    - "Mumbai"
+    - "Delhi"
+    - "Hyderabad"
+    - "Chennai"
+    - "Pune"
+    - "Gurgaon"
+    - "Noida"
+    - "Ahmedabad"
+    - "Kolkata"
+    - "Remote India"
+    - "Hybrid India"
+
+# Agent Configuration
+agents:
+  indian_companies:
+    enabled: true
+    rate_limit: 2  # requests per second
+    max_results: 50
+    respect_robots_txt: true
+  
+  indeed:
+    enabled: true
+    rate_limit: 1
+    max_results: 30
+    filter_india: true
+  
+  linkedin:
+    enabled: true
+    rate_limit: 0.5
+    max_results: 25
+    filter_india: true
+
+# Search Configuration
+search:
+  default_location: "India"
+  max_keywords: 15
+  search_frequency: "hourly"
+  retention_days: 30
+  batch_size: 100
+  
+  # Quality Filters
+  quality_filters:
+    min_description_length: 100
+    require_company_name: true
+    require_location: true
+    min_confidence_score: 60
+
+# Scaling Configuration
+scaling:
+  min_replicas: 4  # Increased for Indian market
+  max_replicas: 20  # Increased for high scale
+  target_cpu_utilization: 70
+  target_memory_utilization: 80
+  
+  # AI Model Scaling
+  ai_models:
+    min_replicas: 2
+    max_replicas: 15
+    target_response_time: 5  # seconds
+
+# Monitoring and Analytics
+monitoring:
+  enable_metrics: true
+  enable_health_checks: true
+  log_level: "INFO"
+  prometheus_port: 9090
+  
+  # Indian Market Specific Metrics
+  metrics:
+    - "indian_companies_searched"
+    - "jobs_found_by_location"
+    - "jobs_found_by_company_type"
+    - "ai_model_accuracy"
+    - "search_quality_scores"
+    - "market_trends"
+
+# Performance Optimization
+performance:
+  enable_caching: true
+  cache_ttl: 3600  # 1 hour
+  enable_async_processing: true
+  max_concurrent_searches: 50
+  enable_result_deduplication: true
+  
+  # Database Optimization
+  database:
+    enable_connection_pooling: true
+    enable_query_caching: true
+    batch_insert_size: 1000

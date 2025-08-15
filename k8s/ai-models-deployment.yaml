@@ -1,0 +1,277 @@
+# Llama 2 Model Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llama2-service
+  namespace: varun-dev
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: llama2-service
+  template:
+    metadata:
+      labels:
+        app: llama2-service
+    spec:
+      containers:
+        - name: llama2
+          image: ghcr.io/llama-cpp-python/llama-cpp-python:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: MODEL_PATH
+              value: "/models/llama-2-7b-chat.gguf"
+            - name: MAX_TOKENS
+              value: "512"
+            - name: TEMPERATURE
+              value: "0.1"
+          volumeMounts:
+            - name: llama2-models
+              mountPath: /models
+          resources:
+            requests:
+              memory: "8Gi"
+              cpu: "4"
+            limits:
+              memory: "16Gi"
+              cpu: "8"
+      volumes:
+        - name: llama2-models
+          persistentVolumeClaim:
+            claimName: llama2-models-pvc
+---
+# Falcon Model Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: falcon-service
+  namespace: varun-dev
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: falcon-service
+  template:
+    metadata:
+      labels:
+        app: falcon-service
+    spec:
+      containers:
+        - name: falcon
+          image: tiiuae/falcon-7b-instruct:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: MODEL_PATH
+              value: "/models/falcon-7b-instruct"
+            - name: MAX_TOKENS
+              value: "512"
+          volumeMounts:
+            - name: falcon-models
+              mountPath: /models
+          resources:
+            requests:
+              memory: "8Gi"
+              cpu: "4"
+            limits:
+              memory: "16Gi"
+              cpu: "8"
+      volumes:
+        - name: falcon-models
+          persistentVolumeClaim:
+            claimName: falcon-models-pvc
+---
+# Mistral Model Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mistral-service
+  namespace: varun-dev
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mistral-service
+  template:
+    metadata:
+      labels:
+        app: mistral-service
+    spec:
+      containers:
+        - name: mistral
+          image: mistralai/mistral-7b-instruct:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: MODEL_PATH
+              value: "/models/mistral-7b-instruct"
+            - name: MAX_TOKENS
+              value: "512"
+          volumeMounts:
+            - name: mistral-models
+              mountPath: /models
+          resources:
+            requests:
+              memory: "8Gi"
+              cpu: "4"
+            limits:
+              memory: "16Gi"
+              cpu: "8"
+      volumes:
+        - name: mistral-models
+          persistentVolumeClaim:
+            claimName: mistral-models-pvc
+---
+# Services for AI Models
+apiVersion: v1
+kind: Service
+metadata:
+  name: llama2-service
+  namespace: varun-dev
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: llama2-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: falcon-service
+  namespace: varun-dev
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: falcon-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mistral-service
+  namespace: varun-dev
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: mistral-service
+---
+# Persistent Volume Claims for AI Models
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: llama2-models-pvc
+  namespace: varun-dev
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: falcon-models-pvc
+  namespace: varun-dev
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mistral-models-pvc
+  namespace: varun-dev
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+---
+# Horizontal Pod Autoscalers for AI Models
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: llama2-hpa
+  namespace: varun-dev
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: llama2-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: falcon-hpa
+  namespace: varun-dev
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: falcon-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      name: memory
+      target:
+        type: Utilization
+          averageUtilization: 80
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: mistral-hpa
+  namespace: varun-dev
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: mistral-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      name: memory
+      target:
+        type: Utilization
+          averageUtilization: 80
