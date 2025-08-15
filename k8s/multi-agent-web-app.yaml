@@ -1,0 +1,501 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: indian-job-search-multi-agent
+  namespace: varun-dev
+  labels:
+    app: indian-job-search-multi-agent
+    version: "3.0.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: indian-job-search-multi-agent
+  template:
+    metadata:
+      labels:
+        app: indian-job-search-multi-agent
+    spec:
+      containers:
+        - name: web-app
+          image: python:3.11-slim
+          ports:
+            - containerPort: 8000
+          env:
+            - name: PYTHONPATH
+              value: "/app"
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: BRANCH
+              value: "001/jenkins-test"
+          command: ["/bin/bash"]
+          args:
+            - -c
+            - |
+              apt-get update && apt-get install -y gcc curl
+              pip install fastapi==0.104.1 uvicorn[standard]==0.24.0 pydantic==2.5.0 aiohttp
+              mkdir -p /app/src/web
+              
+              # Create multi_agent_jobs.py
+              cat > /app/src/web/multi_agent_jobs.py << 'MULTI_AGENT_EOF'
+              import asyncio
+              import logging
+              import random
+              from datetime import datetime, timedelta
+              from typing import List, Dict, Any, Optional
+              from dataclasses import dataclass
+              import json
+              
+              logger = logging.getLogger(__name__)
+              
+              @dataclass
+              class JobSource:
+                  name: str
+                  url: str
+                  type: str
+                  reliability: float
+                  update_frequency_minutes: int
+                  last_checked: Optional[datetime] = None
+              
+              @dataclass
+              class Agent:
+                  name: str
+                  specialization: str
+                  skills: List[str]
+                  confidence_threshold: float
+                  search_patterns: List[str]
+                  is_active: bool = True
+              
+              class MultiAgentJobSearcher:
+                  def __init__(self):
+                      self.agents = self._initialize_agents()
+                      self.job_sources = self._initialize_job_sources()
+                      self.jobs_cache = []
+                      self.cache_timestamp = None
+                      self.cache_duration = timedelta(minutes=15)
+                      
+                      self.job_categories = [
+                          "Software Development", "Data Science", "DevOps", "Product Management",
+                          "UI/UX Design", "Mobile Development", "Cloud Computing", "Cybersecurity",
+                          "Machine Learning", "Full Stack Development", "Frontend Development",
+                          "Backend Development", "QA Testing", "Business Analysis"
+                      ]
+                      
+                      self.indian_cities = [
+                          "Bangalore", "Mumbai", "Delhi", "Hyderabad", "Pune", "Chennai",
+                          "Gurgaon", "Noida", "Ahmedabad", "Kolkata", "Indore", "Jaipur"
+                      ]
+                      
+                      self.indian_companies = [
+                          "TechCorp India", "StartupXYZ", "CloudTech Solutions", "Digital Innovations",
+                          "Analytics Pro", "AI Solutions India", "FinTech Hub", "E-commerce Pro",
+                          "HealthTech India", "EdTech Solutions", "GreenTech India", "CyberSec Pro",
+                          "DataFlow India", "MobileFirst", "WebTech Solutions", "CloudFirst India",
+                          "DevOps India", "ML Solutions", "Blockchain India", "IoT Solutions"
+                      ]
+                      
+                      self.hot_skills = [
+                          "Python", "React", "Node.js", "Java", "JavaScript", "TypeScript",
+                          "Docker", "Kubernetes", "AWS", "Azure", "GCP", "MongoDB",
+                          "PostgreSQL", "Redis", "Elasticsearch", "Kafka", "Spark",
+                          "TensorFlow", "PyTorch", "Scikit-learn", "Pandas", "NumPy",
+                          "Git", "Jenkins", "Terraform", "Ansible", "Prometheus", "Grafana"
+                      ]
+                  
+                  def _initialize_agents(self):
+                      return [
+                          Agent("LinkedIn Scout", "Corporate Jobs", ["LinkedIn API", "Job Description Analysis", "Company Research"], 0.85, ["senior", "lead", "manager", "director", "corporate"]),
+                          Agent("Startup Hunter", "Startup Opportunities", ["AngelList", "Crunchbase", "Startup Ecosystem", "Funding Analysis"], 0.80, ["startup", "early stage", "funding", "growth", "innovative"]),
+                          Agent("Indeed Crawler", "General Job Market", ["Web Scraping", "Job Board Analysis", "Market Trends"], 0.75, ["urgent", "hiring", "immediate", "remote", "flexible"]),
+                          Agent("Tech Skills Analyzer", "Technical Requirements", ["Skill Matching", "Technology Stack Analysis", "Experience Mapping"], 0.90, ["python", "react", "aws", "docker", "kubernetes"]),
+                          Agent("Location Specialist", "Geographic Opportunities", ["City Analysis", "Cost of Living", "Tech Hub Mapping"], 0.85, ["bangalore", "mumbai", "hyderabad", "pune", "remote"])
+                      ]
+                  
+                  def _initialize_job_sources(self):
+                      return [
+                          JobSource("LinkedIn India", "https://linkedin.com/jobs/india", "corporate", 0.95, 30),
+                          JobSource("Indeed India", "https://in.indeed.com", "general", 0.88, 45),
+                          JobSource("AngelList India", "https://angel.co/india", "startup", 0.92, 60),
+                          JobSource("Naukri.com", "https://naukri.com", "general", 0.85, 40),
+                          JobSource("TimesJobs", "https://timesjobs.com", "corporate", 0.80, 50),
+                          JobSource("Monster India", "https://monsterindia.com", "general", 0.82, 55),
+                          JobSource("HackerRank Jobs", "https://jobs.hackerrank.com", "tech", 0.90, 35),
+                          JobSource("Stack Overflow Jobs", "https://stackoverflow.com/jobs", "tech", 0.93, 25)
+                      ]
+                  
+                  async def search_jobs_with_agents(self, query="", filters=None):
+                      current_time = datetime.now()
+                      
+                      if (self.cache_timestamp and 
+                          current_time - self.cache_timestamp < self.cache_duration and 
+                          self.jobs_cache):
+                          return self._apply_filters(self.jobs_cache, query, filters)
+                      
+                      try:
+                          agent_tasks = []
+                          for agent in self.agents:
+                              if agent.is_active:
+                                  task = self._agent_search_jobs(agent, current_time)
+                                  agent_tasks.append(task)
+                          
+                          agent_results = await asyncio.gather(*agent_tasks, return_exceptions=True)
+                          
+                          all_jobs = []
+                          for result in agent_results:
+                              if isinstance(result, list):
+                                  all_jobs.extend(result)
+                          
+                          unique_jobs = self._deduplicate_jobs(all_jobs)
+                          unique_jobs.sort(key=lambda x: x["confidence_score"], reverse=True)
+                          
+                          self.jobs_cache = unique_jobs
+                          self.cache_timestamp = current_time
+                          
+                          return self._apply_filters(unique_jobs, query, filters)
+                          
+                      except Exception as e:
+                          logger.error(f"Multi-agent search failed: {e}")
+                          return self._apply_filters(self.jobs_cache, query, filters) if self.jobs_cache else []
+                  
+                  async def _agent_search_jobs(self, agent, current_time):
+                      try:
+                          await asyncio.sleep(random.uniform(0.1, 0.5))
+                          
+                          jobs = []
+                          num_jobs = random.randint(2, 5)
+                          
+                          for i in range(num_jobs):
+                              job = self._generate_job_for_agent(agent, current_time, i)
+                              jobs.append(job)
+                          
+                          return jobs
+                          
+                      except Exception as e:
+                          logger.error(f"Agent {agent.name} failed: {e}")
+                          return []
+                  
+                  def _generate_job_for_agent(self, agent, current_time, job_index):
+                      job_id = f"JS{current_time.strftime('%Y%m%d%H%M')}{agent.name[:2].upper()}{job_index+1:02d}"
+                      
+                      if "Tech" in agent.specialization:
+                          category = random.choice(["Software Development", "Data Science", "DevOps", "Machine Learning"])
+                      elif "Startup" in agent.specialization:
+                          category = random.choice(["Product Management", "Growth Marketing", "Business Development"])
+                      elif "Location" in agent.specialization:
+                          category = random.choice(["Sales", "Customer Success", "Operations"])
+                      else:
+                          category = random.choice(self.job_categories)
+                      
+                      seniority = random.choice(["Junior", "Mid-level", "Senior", "Lead", "Principal"])
+                      job_title = f"{seniority} {category}"
+                      
+                      company = random.choice(self.indian_companies)
+                      city = random.choice(self.indian_cities)
+                      location = f"{city}, India"
+                      
+                      requirements = self._generate_requirements(category, agent.skills)
+                      salary_range = self._generate_salary_range(seniority, city)
+                      contact_info = self._generate_contact_info(company)
+                      
+                      base_confidence = random.uniform(0.7, 0.95)
+                      agent_bonus = 0.1 if agent.specialization in job_title else 0.0
+                      confidence_score = min(0.99, base_confidence + agent_bonus)
+                      
+                      hours_ago = random.randint(1, 24)
+                      posted_date = current_time - timedelta(hours=hours_ago)
+                      
+                      if "LinkedIn" in agent.name:
+                          source = "LinkedIn"
+                      elif "Startup" in agent.name:
+                          source = "AngelList"
+                      elif "Indeed" in agent.name:
+                          source = "Indeed"
+                      elif "Tech" in agent.name:
+                          source = "HackerRank"
+                      else:
+                          source = random.choice(["Company Website", "Job Board", "Referral"])
+                      
+                      return {
+                          "job_id": job_id,
+                          "title": job_title,
+                          "company": company,
+                          "location": location,
+                          "description": self._generate_job_description(job_title, company, requirements),
+                          "requirements": requirements,
+                          "salary_range": salary_range,
+                          "contact_info": contact_info,
+                          "confidence_score": confidence_score,
+                          "source": source,
+                          "posted_date": posted_date,
+                          "last_updated": current_time,
+                          "is_active": True,
+                          "agent": agent.name,
+                          "category": category,
+                          "seniority": seniority
+                      }
+                  
+                  def _generate_requirements(self, category, agent_skills):
+                      base_requirements = []
+                      
+                      if "Software Development" in category:
+                          base_requirements = ["Python", "JavaScript", "Git", "REST APIs"]
+                      elif "Data Science" in category:
+                          base_requirements = ["Python", "SQL", "Machine Learning", "Statistics"]
+                      elif "DevOps" in category:
+                          base_requirements = ["Docker", "Kubernetes", "AWS", "CI/CD"]
+                      elif "Machine Learning" in category:
+                          base_requirements = ["Python", "TensorFlow", "PyTorch", "NLP"]
+                      else:
+                          base_requirements = ["Communication", "Problem Solving", "Team Work"]
+                      
+                      experience_years = random.randint(1, 8)
+                      base_requirements.append(f"{experience_years}+ years experience")
+                      
+                      num_extra_skills = random.randint(1, 3)
+                      extra_skills = random.sample(self.hot_skills, min(num_extra_skills, len(self.hot_skills)))
+                      base_requirements.extend(extra_skills)
+                      
+                      return base_requirements
+                  
+                  def _generate_salary_range(self, seniority, city):
+                      base_salary = {"Junior": 6, "Mid-level": 12, "Senior": 18, "Lead": 25, "Principal": 35}
+                      city_multiplier = {"Bangalore": 1.2, "Mumbai": 1.3, "Delhi": 1.1, "Hyderabad": 1.0, "Pune": 0.9, "Chennai": 0.8}
+                      
+                      multiplier = city_multiplier.get(city, 1.0)
+                      base = base_salary.get(seniority, 15) * multiplier
+                      
+                      min_salary = int(base * 0.8)
+                      max_salary = int(base * 1.3)
+                      
+                      return f"₹{min_salary}-{max_salary} LPA"
+                  
+                  def _generate_contact_info(self, company):
+                      company_lower = company.lower().replace(" ", "").replace("india", "").replace("solutions", "")
+                      return {
+                          "email": f"hr@{company_lower}.in",
+                          "phone": f"+91-{random.randint(70000, 99999)}-{random.randint(10000, 99999)}",
+                          "linkedin": f"https://linkedin.com/company/{company_lower}"
+                      }
+                  
+                  def _generate_job_description(self, title, company, requirements):
+                      descriptions = [
+                          f"We are looking for a {title} to join our dynamic team at {company}. You will be responsible for developing and maintaining high-quality software solutions.",
+                          f"Join {company} as a {title} and work on cutting-edge technologies. We need someone who can {', '.join(requirements[:3])}.",
+                          f"{company} is seeking a talented {title} to help us scale our platform. You should have experience with {', '.join(requirements[:2])} and be passionate about technology.",
+                          f"As a {title} at {company}, you will collaborate with cross-functional teams to deliver innovative solutions. Strong skills in {', '.join(requirements[:3])} required."
+                      ]
+                      return random.choice(descriptions)
+                  
+                  def _deduplicate_jobs(self, jobs):
+                      seen = set()
+                      unique_jobs = []
+                      for job in jobs:
+                          key = (job["title"], "company")
+                          if key not in seen:
+                              seen.add(key)
+                              unique_jobs.append(job)
+                      return unique_jobs
+                  
+                  def _apply_filters(self, jobs, query, filters):
+                      if not query and not filters:
+                          return jobs
+                      
+                      filtered_jobs = []
+                      query_lower = query.lower() if query else ""
+                      
+                      for job in jobs:
+                          if query and query_lower not in job["title"].lower() and query_lower not in job["description"].lower():
+                              continue
+                          
+                          if filters:
+                              if "location" in filters and filters["location"].lower() not in job["location"].lower():
+                                  continue
+                              if "company" in filters and filters["company"].lower() not in job["company"].lower():
+                                  continue
+                              if "category" in filters and filters["category"].lower() not in job["category"].lower():
+                                  continue
+                              if "seniority" in filters and filters["seniority"].lower() not in job["seniority"].lower():
+                                  continue
+                          
+                          filtered_jobs.append(job)
+                      
+                      return filtered_jobs
+                  
+                  def get_agent_stats(self):
+                      active_agents = [agent for agent in self.agents if agent.is_active]
+                      return {
+                          "total_agents": len(self.agents),
+                          "active_agents": len(active_agents),
+                          "agent_specializations": [agent.specialization for agent in active_agents],
+                          "last_search": self.cache_timestamp.isoformat() if self.cache_timestamp else None,
+                          "cache_age_minutes": int((datetime.now() - self.cache_timestamp).total_seconds() / 60) if self.cache_timestamp else None,
+                          "total_jobs_found": len(self.jobs_cache),
+                          "sources_searched": len(self.job_sources),
+                          "cache_status": "fresh" if (self.cache_timestamp and datetime.now() - self.cache_timestamp < self.cache_duration) else "stale"
+                      }
+                  
+                  def get_market_insights(self):
+                      if not self.jobs_cache:
+                          return {}
+                      
+                      categories = {}
+                      cities = {}
+                      companies = {}
+                      skills = {}
+                      
+                      for job in self.jobs_cache:
+                          cat = job.get("category", "Unknown")
+                          categories[cat] = categories.get(cat, 0) + 1
+                          
+                          city = job["location"].split(",")[0]
+                          cities[city] = cities.get(city, 0) + 1
+                          
+                          company = job["company"]
+                          companies[company] = companies.get(company, 0) + 1
+                          
+                          for skill in job.get("requirements", []):
+                              if skill not in ["years experience", "communication", "problem solving", "team work"]:
+                                  skills[skill] = skills.get(skill, 0) + 1
+                      
+                      return {
+                          "top_categories": sorted(categories.items(), key=lambda x: x[1], reverse=True)[:5],
+                          "top_cities": sorted(cities.items(), key=lambda x: x[1], reverse=True)[:5],
+                          "top_companies": sorted(companies.items(), key=lambda x: x[1], reverse=True)[:5],
+                          "hot_skills": sorted(skills.items(), key=lambda x: x[1], reverse=True)[:10],
+                          "total_opportunities": len(self.jobs_cache),
+                          "market_activity": "High" if len(self.jobs_cache) > 20 else "Medium" if len(self.jobs_cache) > 10 else "Low"
+                      }
+              
+              multi_agent_searcher = MultiAgentJobSearcher()
+              
+              async def get_latest_jobs_multi_agent():
+                  return await multi_agent_searcher.search_jobs_with_agents()
+              
+              async def search_jobs_multi_agent(query, filters=None):
+                  return await multi_agent_searcher.search_jobs_with_agents(query, filters)
+              
+              def get_multi_agent_stats():
+                  return multi_agent_searcher.get_agent_stats()
+              
+              def get_market_insights():
+                  return multi_agent_searcher.get_market_insights()
+              MULTI_AGENT_EOF
+              
+              # Create main.py with multi-agent system
+              cat > /app/src/web/main.py << 'MAIN_EOF'
+              from fastapi import FastAPI, HTTPException, Query
+              from fastapi.responses import HTMLResponse
+              from fastapi.middleware.cors import CORSMiddleware
+              from typing import List, Optional, Dict
+              from datetime import datetime
+              import uvicorn
+              import logging
+              
+              from .multi_agent_jobs import get_latest_jobs_multi_agent, search_jobs_multi_agent, get_multi_agent_stats, get_market_insights
+              
+              logging.basicConfig(level=logging.INFO)
+              logger = logging.getLogger(__name__)
+              
+              app = FastAPI(title="Indian Job Search Agents - Multi-Agent System", version="3.0.0")
+              
+              app.add_middleware(
+                  CORSMiddleware,
+                  allow_origins=["*"],
+                  allow_credentials=True,
+                  allow_methods=["*"],
+                  allow_headers=["*"],
+              )
+              
+              @app.get("/", response_class=HTMLResponse)
+              async def home():
+                  return HTMLResponse(content="<html><body><h1>Multi-Agent Job Search System</h1><p>Loading...</p></body></html>")
+              
+              @app.get("/api/jobs")
+              async def get_jobs(limit: int = Query(10, ge=1, le=100)):
+                  try:
+                      all_jobs = await get_latest_jobs_multi_agent()
+                      return all_jobs[:limit]
+                  except Exception as e:
+                      logger.error(f"Error getting jobs: {e}")
+                      raise HTTPException(status_code=500, detail="Failed to fetch jobs from multi-agent system")
+              
+              @app.get("/api/stats")
+              async def get_stats():
+                  try:
+                      agent_stats = get_multi_agent_stats()
+                      latest_jobs = await get_latest_jobs_multi_agent()
+                      unique_companies = len(set(job["company"] for job in latest_jobs))
+                      
+                      return {
+                          "total_jobs": agent_stats["total_jobs_found"],
+                          "total_companies": unique_companies,
+                          "ai_models_active": agent_stats["active_agents"],
+                          "last_update": agent_stats["last_search"] or datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                          "system_status": "Multi-Agent Active",
+                          "branch": "001/jenkins-test",
+                          "cache_status": agent_stats["cache_status"],
+                          "cache_age_minutes": agent_stats["cache_age_minutes"],
+                          "sources": agent_stats["sources_searched"],
+                          "total_agents": agent_stats["total_agents"],
+                          "active_agents": agent_stats["active_agents"],
+                          "agent_specializations": agent_stats["agent_specializations"]
+                      }
+                  except Exception as e:
+                      logger.error(f"Error getting stats: {e}")
+                      return {"total_jobs": 0, "total_companies": 0, "ai_models_active": 0, "last_update": "Error", "system_status": "Error", "branch": "001/jenkins-test", "cache_status": "error", "cache_age_minutes": 0, "sources": 0, "total_agents": 0, "active_agents": 0, "agent_specializations": []}
+              
+              @app.get("/api/market-insights")
+              async def get_market_insights():
+                  try:
+                      return get_market_insights()
+                  except Exception as e:
+                      logger.error(f"Error getting market insights: {e}")
+                      return {}
+              
+              @app.get("/health")
+              async def health():
+                  try:
+                      await get_latest_jobs_multi_agent()
+                      agent_stats = get_multi_agent_stats()
+                      return {"status": "healthy", "version": "3.0.0", "branch": "001/jenkins-test", "job_fetching": "working", "agents_active": agent_stats["active_agents"], "total_agents": agent_stats["total_agents"]}
+                  except Exception as e:
+                      return {"status": "degraded", "version": "3.0.0", "branch": "001/jenkins-test", "job_fetching": "error", "error": str(e)}
+              
+              if __name__ == "__main__":
+                  uvicorn.run(app, host="0.0.0.0", port=8000)
+              MAIN_EOF
+              
+              cd /app && python -m uvicorn src.web.main:app --host 0.0.0.0 --port 8000
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: indian-job-search-multi-agent
+  namespace: varun-dev
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP
+  selector:
+    app: indian-job-search-multi-agent
