@@ -1,0 +1,141 @@
+# Lightweight AI Models for Testing (Minimal Resources)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llama2-service-lite
+  namespace: varun-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llama2-service-lite
+  template:
+    metadata:
+      labels:
+        app: llama2-service-lite
+    spec:
+      containers:
+        - name: llama2
+          image: ghcr.io/llama-cpp-python/llama-cpp-python:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: MODEL_PATH
+              value: "/models/llama-2-7b-chat.gguf"
+            - name: MAX_TOKENS
+              value: "256"
+            - name: TEMPERATURE
+              value: "0.1"
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: falcon-service-lite
+  namespace: varun-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: falcon-service-lite
+  template:
+    metadata:
+      labels:
+        app: falcon-service-lite
+    spec:
+      containers:
+        - name: falcon
+          image: tiiuae/falcon-7b-instruct:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: MODEL_PATH
+              value: "/models/falcon-7b-instruct"
+            - name: MAX_TOKENS
+              value: "256"
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mistral-service-lite
+  namespace: varun-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mistral-service-lite
+  template:
+    metadata:
+      labels:
+        app: mistral-service-lite
+    spec:
+      containers:
+        - name: mistral
+          image: mistralai/mistral-7b-instruct:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: MODEL_PATH
+              value: "/models/mistral-7b-instruct"
+            - name: MAX_TOKENS
+              value: "256"
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+---
+# Services for Lightweight AI Models
+apiVersion: v1
+kind: Service
+metadata:
+  name: llama2-service-lite
+  namespace: varun-dev
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: llama2-service-lite
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: falcon-service-lite
+  namespace: varun-dev
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: falcon-service-lite
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mistral-service-lite
+  namespace: varun-dev
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: mistral-service-lite

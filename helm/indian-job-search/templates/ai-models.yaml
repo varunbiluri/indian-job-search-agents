@@ -1,0 +1,156 @@
+{{- if .Values.aiModels.enabled }}
+# Llama 2 Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "indian-job-search.fullname" . }}-llama2
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "indian-job-search.labels" . | nindent 4 }}
+    app.kubernetes.io/component: llama2
+spec:
+  replicas: {{ .Values.aiModels.llama2.replicas }}
+  selector:
+    matchLabels:
+      {{- include "indian-job-search.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: llama2
+  template:
+    metadata:
+      labels:
+        {{- include "indian-job-search.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: llama2
+    spec:
+      containers:
+        - name: llama2
+          image: ghcr.io/llama-cpp-python/llama-cpp-python:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: MODEL_PATH
+              value: "/models/llama-2-7b-chat.gguf"
+            - name: MAX_TOKENS
+              value: "256"
+            - name: TEMPERATURE
+              value: "0.1"
+          resources:
+            {{- toYaml .Values.aiModels.llama2.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "indian-job-search.fullname" . }}-llama2
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "indian-job-search.labels" . | nindent 4 }}
+    app.kubernetes.io/component: llama2
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    {{- include "indian-job-search.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: llama2
+---
+# Falcon Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "indian-job-search.fullname" . }}-falcon
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "indian-job-search.labels" . | nindent 4 }}
+    app.kubernetes.io/component: falcon
+spec:
+  replicas: {{ .Values.aiModels.falcon.replicas }}
+  selector:
+    matchLabels:
+      {{- include "indian-job-search.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: falcon
+  template:
+    metadata:
+      labels:
+        {{- include "indian-job-search.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: falcon
+    spec:
+      containers:
+        - name: falcon
+          image: tiiuae/falcon-7b-instruct:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: MODEL_PATH
+              value: "/models/falcon-7b-instruct"
+            - name: MAX_TOKENS
+              value: "256"
+          resources:
+            {{- toYaml .Values.aiModels.falcon.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "indian-job-search.fullname" . }}-falcon
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "indian-job-search.labels" . | nindent 4 }}
+    app.kubernetes.io/component: falcon
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    {{- include "indian-job-search.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: falcon
+---
+# Mistral Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "indian-job-search.fullname" . }}-mistral
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "indian-job-search.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mistral
+spec:
+  replicas: {{ .Values.aiModels.mistral.replicas }}
+  selector:
+    matchLabels:
+      {{- include "indian-job-search.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: mistral
+  template:
+    metadata:
+      labels:
+        {{- include "indian-job-search.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: mistral
+    spec:
+      containers:
+        - name: mistral
+          image: mistralai/mistral-7b-instruct:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: MODEL_PATH
+              value: "/models/mistral-7b-instruct"
+            - name: MAX_TOKENS
+              value: "256"
+          resources:
+            {{- toYaml .Values.aiModels.mistral.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "indian-job-search.fullname" . }}-mistral
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "indian-job-search.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mistral
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    {{- include "indian-job-search.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: mistral
+{{- end }}

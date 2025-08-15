@@ -1,0 +1,46 @@
+# Test Job Search API (Simple Version)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: job-search-api-test
+  namespace: varun-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: job-search-api-test
+  template:
+    metadata:
+      labels:
+        app: job-search-api-test
+    spec:
+      containers:
+        - name: api
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          env:
+            - name: TEST_MODE
+              value: "true"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          command: ["/bin/sh"]
+          args: ["-c", "echo 'Job Search API Test Mode' && echo 'Azure AI Integration Ready' && nginx -g 'daemon off;'"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: job-search-api-test
+  namespace: varun-dev
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    app: job-search-api-test

@@ -1,0 +1,120 @@
+# Production values for Indian Job Search Application
+
+# Application Configuration
+app:
+  name: indian-job-search
+  version: "1.0.0"
+  environment: production
+  replicas: 5
+
+# Image Configuration
+image:
+  repository: job-search-api
+  tag: "latest"
+  pullPolicy: Always
+
+# Azure AI Configuration (Update with your actual values)
+azure:
+  openai:
+    enabled: true
+    endpoint: "https://your-resource.openai.azure.com"
+    deployment_name: "gpt-4"
+    api_version: "2024-02-15-preview"
+  cognitive:
+    enabled: true
+    endpoint: "https://your-resource.cognitiveservices.azure.com"
+  ml:
+    enabled: true
+    endpoint: "https://your-workspace.azureml.net"
+
+# AI Models Configuration
+aiModels:
+  enabled: true
+  llama2:
+    enabled: true
+    replicas: 3
+    resources:
+      requests:
+        memory: "2Gi"
+        cpu: "1000m"
+      limits:
+        memory: "4Gi"
+        cpu: "2000m"
+  falcon:
+    enabled: true
+    replicas: 3
+    resources:
+      requests:
+        memory: "2Gi"
+        cpu: "1000m"
+      limits:
+        memory: "4Gi"
+        cpu: "2000m"
+  mistral:
+    enabled: true
+    replicas: 3
+    resources:
+      requests:
+        memory: "2Gi"
+        cpu: "1000m"
+      limits:
+        memory: "4Gi"
+        cpu: "2000m"
+
+# Airflow Configuration
+airflow:
+  enabled: true
+  dags:
+    - name: indian_job_search_automation
+      schedule: "0 * * * *"  # Every hour
+      enabled: true
+  webserver:
+    replicas: 3
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+  scheduler:
+    replicas: 3
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+
+# Service Configuration
+service:
+  type: LoadBalancer
+  port: 80
+  targetPort: 8000
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: /health
+
+# Autoscaling Configuration
+autoscaling:
+  enabled: true
+  minReplicas: 5
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Resources Configuration
+resources:
+  requests:
+    memory: "1Gi"
+    cpu: "500m"
+  limits:
+    memory: "2Gi"
+    cpu: "1000m"
+
+# Monitoring Configuration
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    port: 9090

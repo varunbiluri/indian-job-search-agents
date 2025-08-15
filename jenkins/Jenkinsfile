@@ -1,0 +1,1 @@
+pipeline { agent any stages { stage("Checkout") { steps { echo "Checking out code..." checkout scm } } stage("Build") { steps { echo "Building application..." sh "echo Building..." } } stage("Deploy") { steps { echo "Deploying to Azure..." sh "echo Deploying..." } } } } }
