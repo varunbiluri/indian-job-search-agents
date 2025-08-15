@@ -6,6 +6,7 @@ import logging
 from datetime import datetime
 
 from ..agents.indian_market_orchestrator import IndianMarketOrchestrator
+from ..agents.direct_ai_models import DirectAIModels
 from ..database.database import get_db
 from ..database.indian_market_models import IndianCompany, IndianJobPosting, IndianMarketSearch
 

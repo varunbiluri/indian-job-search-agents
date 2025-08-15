@@ -6,7 +6,7 @@ from .base_agent import BaseSearchAgent, JobData
 from .indian_companies_agent import IndianCompaniesAgent
 from .indeed_agent import IndeedAgent
 from .linkedin_agent import LinkedInAgent
-from .multi_ai_models import MultiAIModelsAgent
+from .direct_ai_models import DirectAIModels
 
 class IndianMarketOrchestrator:
     """Orchestrates job search across Indian market using multiple agents and AI models"""
@@ -34,8 +34,8 @@ class IndianMarketOrchestrator:
             self.agents.append(IndeedAgent(self.config.get("indeed", {})))
             self.agents.append(LinkedInAgent(self.config.get("linkedin", {})))
             
-            # AI models for decision making
-            self.ai_models = MultiAIModelsAgent(self.config.get("ai_models", {}))
+            # Direct AI models for decision making
+            self.ai_models = DirectAIModels(self.config.get("ai_models", {}))
             
             self.logger.info(f"Initialized {len(self.agents)} agents for Indian market")
             
