@@ -1,0 +1,67 @@
+# Multi-Agent Job Search Configuration
+
+# API Configuration
+api:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  workers: 4
+
+# Database Configuration
+database:
+  url: "postgresql://airflow:airflow@airflow-postgresql:5432/airflow"
+  pool_size: 20
+  max_overflow: 30
+  echo: false
+
+# Redis Configuration
+redis:
+  url: "redis://redis:6379"
+  pool_size: 10
+
+# OpenAI Configuration
+openai:
+  api_key: "${OPENAI_API_KEY}"
+  model: "gpt-3.5-turbo"
+  max_tokens: 200
+  temperature: 0.1
+
+# Agent Configuration
+agents:
+  indeed:
+    enabled: true
+    rate_limit: 1  # requests per second
+    max_results: 20
+    user_agent: "Mozilla/5.0 (compatible; JobSearchBot/1.0)"
+  
+  linkedin:
+    enabled: true
+    rate_limit: 0.5  # requests per second
+    max_results: 15
+    use_api: false  # Set to true if using official API
+  
+  ai_extractor:
+    enabled: true
+    batch_size: 5
+    max_retries: 3
+
+# Search Configuration
+search:
+  default_location: "Remote"
+  max_keywords: 10
+  search_frequency: "hourly"
+  retention_days: 30
+
+# Monitoring
+monitoring:
+  enable_metrics: true
+  enable_health_checks: true
+  log_level: "INFO"
+  prometheus_port: 9090
+
+# Scaling
+scaling:
+  min_replicas: 2
+  max_replicas: 10
+  target_cpu_utilization: 70
+  target_memory_utilization: 80
