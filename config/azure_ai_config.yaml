@@ -1,0 +1,74 @@
+# Azure AI Services Configuration for Indian Job Search
+
+# Azure OpenAI Configuration
+azure_openai:
+  enabled: true
+  endpoint: "https://your-resource.openai.azure.com"  # Replace with your Azure OpenAI endpoint
+  api_key: "your-azure-openai-api-key"  # Replace with your API key
+  deployment_name: "gpt-4"  # Your deployment name
+  api_version: "2024-02-15-preview"
+  max_tokens: 300
+  temperature: 0.1
+
+# Azure Cognitive Services
+azure_cognitive:
+  enabled: true
+  endpoint: "https://your-resource.cognitiveservices.azure.com"
+  api_key: "your-cognitive-services-api-key"
+  services:
+    - "text-analytics"
+    - "language-understanding"
+    - "anomaly-detector"
+
+# Azure Machine Learning
+azure_ml:
+  enabled: true
+  endpoint: "https://your-workspace.azureml.net"
+  api_key: "your-ml-api-key"
+  model_name: "job-search-intelligence"
+
+# Fallback Local Models (if Azure services fail)
+local_models:
+  enabled: false  # Set to true if you want local models as backup
+  llama2:
+    endpoint: "http://llama2-service:8080"
+    enabled: false
+  falcon:
+    endpoint: "http://falcon-service:8080"
+    enabled: false
+  mistral:
+    endpoint: "http://mistral-service:8080"
+    enabled: false
+
+# Azure Resource Configuration
+azure_resources:
+  region: "East US"  # Your Azure region
+  resource_group: "indian-job-search-rg"
+  subscription_id: "your-subscription-id"
+  
+  # Storage for AI models and data
+  storage_account: "indianjobsearchstorage"
+  storage_container: "ai-models"
+  
+  # Key Vault for secrets
+  key_vault: "indian-job-search-kv"
+  
+  # App Service Plan for hosting
+  app_service_plan: "indian-job-search-plan"
+  
+  # Application Insights for monitoring
+  app_insights: "indian-job-search-insights"
+
+# Cost Optimization
+cost_optimization:
+  enable_auto_shutdown: true
+  max_daily_cost: 50  # USD
+  enable_reserved_instances: false
+  use_spot_instances: true
+  
+# Security
+security:
+  enable_managed_identity: true
+  enable_private_endpoints: true
+  enable_encryption_at_rest: true
+  enable_encryption_in_transit: true
