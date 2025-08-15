@@ -1,0 +1,17 @@
+# External LoadBalancer Service for Job Search API
+apiVersion: v1
+kind: Service
+metadata:
+  name: job-search-api-external
+  namespace: varun-dev
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: /health
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP
+  selector:
+    app: job-search-api
+  externalTrafficPolicy: Local

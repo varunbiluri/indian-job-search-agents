@@ -1,0 +1,70 @@
+# Simple Test Deployment for Helm Chart Testing
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helm-test-indian-job-search
+  namespace: varun-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: helm-test-indian-job-search
+  template:
+    metadata:
+      labels:
+        app: helm-test-indian-job-search
+    spec:
+      containers:
+        - name: test-api
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          env:
+            - name: TEST_MODE
+              value: "true"
+            - name: HELM_TEST
+              value: "true"
+          command: ["/bin/sh"]
+          args: ["-c", "echo 'Helm Chart Test - Indian Job Search' && echo 'Azure AI Integration Ready' && nginx -g 'daemon off;'"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: helm-test-indian-job-search
+  namespace: varun-dev
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    app: helm-test-indian-job-search
+---
+# Test ConfigMap for Airflow DAGs
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: helm-test-dags
+  namespace: varun-dev
+data:
+  test_indian_job_search.py: |
+    from airflow import DAG
+    from airflow.operators.python import PythonOperator
+    from datetime import datetime, timedelta
+    
+    dag = DAG(
+        'helm_test_indian_job_search',
+        start_date=datetime(2024, 1, 1),
+        schedule_interval=timedelta(hours=1),
+        catchup=False
+    )
+    
+    def test_function():
+        print("Helm Chart Test - Indian Job Search DAG Working!")
+        return "Success"
+    
+    test_task = PythonOperator(
+        task_id='test_task',
+        python_callable=test_function,
+        dag=dag
+    )
