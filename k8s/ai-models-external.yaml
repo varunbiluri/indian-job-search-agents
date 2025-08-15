@@ -1,0 +1,45 @@
+# External LoadBalancer Services for AI Models
+apiVersion: v1
+kind: Service
+metadata:
+  name: llama2-service-external
+  namespace: varun-dev
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app: llama2-service-lite
+  externalTrafficPolicy: Local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: falcon-service-external
+  namespace: varun-dev
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app: falcon-service-lite
+  externalTrafficPolicy: Local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mistral-service-external
+  namespace: varun-dev
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app: mistral-service-lite
+  externalTrafficPolicy: Local

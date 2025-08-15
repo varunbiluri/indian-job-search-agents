@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "indian-job-search.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "indian-job-search.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "indian-job-search.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "indian-job-search.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: nginx:alpine
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          env:
+            - name: TEST_MODE
+              value: "true"
+            - name: INDIA_MARKET_ENABLED
+              value: "true"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          command: ["/bin/sh"]
+          args: ["-c", "echo 'Indian Job Search API Test Mode' && echo 'Azure AI Integration Ready' && nginx -g 'daemon off;'"]
